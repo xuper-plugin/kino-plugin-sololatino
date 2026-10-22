@@ -1,0 +1,4 @@
+Kino plugin "SoloLatino". Site behaviour (the listing pages, a title's page, the player token API and the Embed69 pages) was read from the live
+sites and from the CloudStream provider "SoloLatinoProvider" in redblacker8/storm-ext (a fork of Stormunblessed/storm-ext); no code was copied
+from it. The Embed69 reader, the packer reader and the request helper are adapted from the Kino plugin "Latino"
+(xuper-plugin/kino-plugin-latino, Apache-2.0), by the same author.
