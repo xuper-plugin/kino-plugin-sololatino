@@ -617,8 +617,8 @@ async function serversOf2(pageUrl, req) {
     pref = "lat";
   }
   const lang = (s) => LANG_NAME[s.lang.toUpperCase()] || "sub";
-  const cost = (s) => extractorFor(s.url) ? 0 : 1;
-  const rank = (s) => (lang(s) === pref ? 0 : lang(s) === "lat" ? 1 : lang(s) === "cast" ? 2 : 3) * 2 + cost(s);
+  const cost = (s) => !extractorFor(s.url) ? 2 : /vidhide/i.test(s.server) ? 1 : 0;
+  const rank = (s) => (lang(s) === pref ? 0 : lang(s) === "lat" ? 1 : lang(s) === "cast" ? 2 : 3) * 3 + cost(s);
   return rows.map((s, i) => ({ ...s, i })).sort((a, b) => rank(a) - rank(b) || a.i - b.i).slice(0, MAX_COPIES);
 }
 async function open(server, req, budget) {
