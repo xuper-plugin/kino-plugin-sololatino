@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2
+
+- The doramas row is tagged `doramas`, genre pages carry their genre on every title, and `telemetry` is added.
+  / La fila de doramas lleva la categoría `doramas`, cada título de un género lleva su género y se agrega `telemetry`.
+
 ## 0.1.1
 
 - StreamWish is tried before VidHide: on a phone VidHide's host took 8 s to time out before the next server opened.

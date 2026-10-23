@@ -65,7 +65,7 @@ const hash36 = (s) => { let h = 5381; for (const ch of String(s)) h = ((h * 33) 
 
 const KIND_GENRE = { anime: "Anime", dorama: "Dorama", toon: "Animación" };
 
-function toItem(card) {
+function toItem(card, genreName) {
   const item = {
     id: "sl-" + (fold(card.slug).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 90) || "t") + "-" + hash36(card.kind + card.slug),
     ref: (card.kind === "movie" ? "m:" : "s:") + card.slug, title: card.title, kind: card.kind,
@@ -73,7 +73,8 @@ function toItem(card) {
   if (card.poster) item.poster = card.poster;
   if (card.year) item.year = String(card.year);
   if (card.rating) item.rating = card.rating;
-  if (KIND_GENRE[card.type]) item.genres = [KIND_GENRE[card.type]];
+  const g = [KIND_GENRE[card.type], genreName].filter(Boolean);
+  if (g.length) item.genres = g;
   return item;
 }
 
@@ -85,7 +86,7 @@ const LISTS = {
   series: { path: "/series", titleKey: "recentSeries", genre: "series" },
   mejores: { path: "/series", query: "sort=rating", titleKey: "topSeries", genre: "series" },
   animes: { path: "/animes", titleKey: "anime", genre: "anime" },
-  doramas: { path: "/doramas", titleKey: "doramas", genre: "series" },
+  doramas: { path: "/doramas", titleKey: "doramas", genre: "doramas" },
 };
 
 /** `{ path, query, title, genre }` for a browse ref ("list:<name>", "genre:<slug>" or "net:<slug>"); null for anything else. */
@@ -93,7 +94,7 @@ function refOf(ref) {
   const m = /^(list|genre|net):([a-z0-9-]+)$/.exec(String(ref || ""));
   if (!m) return null;
   if (m[1] === "list") { const l = LISTS[m[2]]; return l ? { ...l, title: t(l.titleKey) } : null; }
-  if (m[1] === "genre") { const g = GENRES.find((x) => x[0] === m[2]); return g ? { path: "/genero/" + g[0], title: g[1], genre: undefined } : null; }
+  if (m[1] === "genre") { const g = GENRES.find((x) => x[0] === m[2]); return g ? { path: "/genero/" + g[0], title: g[1], genre: undefined, genreName: g[1] } : null; }
   const n = NETWORKS.find((x) => x[0] === m[2]);
   return n ? { path: "/red/" + n[0], title: n[1], genre: "series" } : null;
 }
@@ -111,7 +112,7 @@ const safeRow = async (id, fn) => { try { return await fn(); } catch (e) { kino.
 async function rowOf(id, ref, genre) {
   const def = refOf(ref);
   const { cards } = await listPage(def, 1);
-  const items = cards.slice(0, 20).map(toItem);
+  const items = cards.slice(0, 20).map((c) => toItem(c, def.genreName));
   return items.length ? { id, title: def.title, items, ref, genre: genre || def.genre || "series" } : null;
 }
 
@@ -133,7 +134,7 @@ export async function browse(ref, cursor) {
   if (!def) return { items: [] };
   const page = cursor ? Math.max(1, parseInt(cursor, 10) || 1) : 1;
   const { cards, more } = await listPage(def, page);
-  return { items: cards.map(toItem), next: more ? String(page + 1) : undefined };
+  return { items: cards.map((c) => toItem(c, def.genreName)), next: more ? String(page + 1) : undefined };
 }
 
 /** Search uses the site's suggestion box (JSON): the page itself sits behind a check that only a browser passes. */
@@ -154,7 +155,7 @@ export async function search(arg) {
     cards.push({ slug: m[2], kind: m[1] === "pelicula" ? "movie" : "series", type: String(x.type || ""), title: String(x.title || m[2]), year: Number(x.year) || undefined, poster: String(x.poster || "") });
   }
   const kindOnly = within && /^\/(peliculas)$/.test(within.path) ? "movie" : within && /^\/(series|animes|doramas)$/.test(within.path) ? "series" : null;
-  return cards.filter((c) => !kindOnly || c.kind === kindOnly).slice(0, 40).map(toItem);
+  return cards.filter((c) => !kindOnly || c.kind === kindOnly).slice(0, 40).map((c) => toItem(c));
 }
 
 // ---- the plugin's own section, categories and details ----
