@@ -1,6 +1,7 @@
 import * as vidhide from "./vidhide.js";
+import * as voe from "./voe.js";
 import * as streamwish from "./streamwish.js";
-const TABLE = { vidhide, streamwish };
+const TABLE = { vidhide, streamwish, voe };
 
 /** `{ name, extract(embedUrl, req, kino) }` for an embed's host, or null when no extractor knows it. */
 export function extractorFor(embedUrl) {

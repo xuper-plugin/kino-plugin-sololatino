@@ -278,7 +278,10 @@ async function serversOf(pageUrl, req) {
 
 async function open(server, req, budget) {
   const ex = extractorFor(server.url);
-  if (ex) return ex.extract(server.url, req, kino);
+  if (ex) {
+    const out = await ex.extract(server.url, req, kino);
+    if (out !== undefined) return out; // undefined: the extractor cannot reach its host from here, so the hidden browser may try
+  }
   if (!kino.browser || typeof kino.browser.capture !== "function" || budget.captures <= 0) return null;
   budget.captures -= 1;
   const page = await kino.browser.capture(server.url, { timeoutMs: CAPTURE_MS, match: "\\.m3u8|\\.mp4", headers: { Referer: SITE + "/" } });
