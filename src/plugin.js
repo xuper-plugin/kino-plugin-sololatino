@@ -9,6 +9,7 @@ import * as embed69 from "./embed69.js";
 import { extractorFor } from "./extractors/index.js";
 import { makeReq, UA } from "./util/http.js";
 import { searchWithTerms } from "./util/terms.js";
+import { playable } from "./util/probe.js";
 
 const CACHE_MS = 10 * 60 * 1000;
 const RESOLVE_MS = 70000;
@@ -284,7 +285,7 @@ async function open(server, req, budget) {
   const media = (page && page.media) || [];
   const best = media.find((x) => /m3u8/i.test(x.url)) || media[0];
   if (!best) return null;
-  return { url: best.url, mime: best.mime || (/\.mp4/i.test(best.url) ? "video/mp4" : HLS), headers: best.headers || { Referer: server.url } };
+  return { captured: true, url: best.url, mime: best.mime || (/\.mp4/i.test(best.url) ? "video/mp4" : HLS), headers: best.headers || { Referer: server.url } };
 }
 
 const labelOf = (s) => `${t(LANG_NAME[s.lang.toUpperCase()] || "sub")} · ${SERVER_NAME[s.server.toLowerCase()] || s.server}`;
@@ -307,6 +308,7 @@ export async function resolve(ref) {
     try {
       const out = await open(s, req, budget);
       if (!out) { failures.push(`${s.server}: no stream`); continue; }
+      if (!out.captured && !(await playable(kino, { url: out.url, headers: { "User-Agent": UA, ...(out.headers || {}) } }))) { failures.push(`${s.server}: address does not answer`); continue; }
       const stream = { url: out.url, mime: out.mime, headers: { "User-Agent": UA, ...(out.headers || {}) }, label: labelOf(s) };
       if (out.subtitles) stream.subtitles = out.subtitles;
       if (out.durationMs) stream.durationMs = out.durationMs;

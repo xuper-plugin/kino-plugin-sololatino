@@ -1,7 +1,7 @@
 {
   "id": "sololatino",
   "name": "SoloLatino",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "apiVersion": 9,
   "entry": "plugin.js",
   "icon": "icon.png",
@@ -29,7 +29,8 @@
     "strwish.com",
     "wishembed.com",
     "filelions.com",
-    "vibuxer.com"
+    "vibuxer.com",
+    "*.premilkyway.com"
   ],
   "capabilities": [
     "search",
