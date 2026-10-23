@@ -8,6 +8,7 @@ import { SITE, GENRES, NETWORKS, parseCards, parseTitle, parsePlayers, embedId }
 import * as embed69 from "./embed69.js";
 import { extractorFor } from "./extractors/index.js";
 import { makeReq, UA } from "./util/http.js";
+import { searchWithTerms } from "./util/terms.js";
 
 const CACHE_MS = 10 * 60 * 1000;
 const RESOLVE_MS = 70000;
@@ -56,6 +57,7 @@ async function cached(key, fn) {
     if (e && Date.now() - e.at < CACHE_MS) return e.v;
   } catch (_) { /* no cache */ }
   const v = await fn();
+  if (Array.isArray(v) && !v.length) return v; // an empty answer may be a throttle or a hiccup: not kept
   try { kino.storage.set("c:" + key, JSON.stringify({ at: Date.now(), v }), { ttlMs: CACHE_MS }); } catch (_) { /* a full storage only costs a refetch */ }
   return v;
 }
@@ -138,7 +140,7 @@ export async function browse(ref, cursor) {
 }
 
 /** Search uses the site's suggestion box (JSON): the page itself sits behind a check that only a browser passes. */
-export async function search(arg) {
+async function searchOne(arg) {
   const q = String((typeof arg === "string" ? arg : arg && arg.q) || "").trim();
   const within = typeof arg === "object" && arg && arg.within ? refOf(arg.within) : null;
   if (q.length < 2) return [];
@@ -157,6 +159,8 @@ export async function search(arg) {
   const kindOnly = within && /^\/(peliculas)$/.test(within.path) ? "movie" : within && /^\/(series|animes|doramas)$/.test(within.path) ? "series" : null;
   return cards.filter((c) => !kindOnly || c.kind === kindOnly).slice(0, 40).map((c) => toItem(c));
 }
+
+export const search = (arg) => searchWithTerms(arg, searchOne);
 
 // ---- the plugin's own section, categories and details ----
 
