@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.6
+
+- Search works again: the site's suggestion endpoint (`/api/search/suggest`) answers 404 since late October, so the results page (`/buscar?q=`) is read instead, with the same listing cards; the old endpoint stays as a fallback.
+
 ## 0.1.5
 
 - VOE is now read with plain requests first, the way CloudStream's own extractor does (the page behind `voe.sx`'s redirect carries the video in a JSON script), and the hidden browser is only tried when that host cannot be reached. A page that asks for a human check is skipped, never solved. Needs the red permission to connect to any public server (`fetchHosts`), because VOE's redirect domain rotates.

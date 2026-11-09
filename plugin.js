@@ -602,22 +602,29 @@ async function browse(ref, cursor) {
   const { cards, more } = await listPage(def, page);
   return { items: cards.map((c) => toItem(c, def.genreName)), next: more ? String(page + 1) : void 0 };
 }
-async function searchOne(arg) {
-  const q = String((typeof arg === "string" ? arg : arg && arg.q) || "").trim();
-  const within = typeof arg === "object" && arg && arg.within ? refOf(arg.within) : null;
-  if (q.length < 2) return [];
-  const rows = await cached("s:" + q.toLowerCase(), async () => {
-    const r = await kino.fetch(`${SITE}/api/search/suggest?q=${encodeURIComponent(q)}`, { headers: { "User-Agent": UA, Accept: "application/json" }, timeoutMs: 15e3 });
-    if (!r.ok) throw kino.error("unavailable", `SoloLatino search ${r.status}`, { userMessage: t("unavailable") });
-    const data = JSON.parse(await r.text());
-    return Array.isArray(data) ? data : [];
-  });
+async function searchCards(q) {
+  try {
+    const cards2 = parseCards(await getPage(`${SITE}/buscar?q=${encodeURIComponent(q)}`));
+    if (cards2.length) return cards2;
+  } catch (e) {
+    kino.log("search page: " + (e && e.message));
+  }
+  const r = await kino.fetch(`${SITE}/api/search/suggest?q=${encodeURIComponent(q)}`, { headers: { "User-Agent": UA, Accept: "application/json" }, timeoutMs: 15e3 });
+  if (!r.ok) throw kino.error("unavailable", `SoloLatino search ${r.status}`, { userMessage: t("unavailable") });
+  const data = JSON.parse(await r.text());
   const cards = [];
-  for (const x of rows) {
+  for (const x of Array.isArray(data) ? data : []) {
     const m = /sololatino\.net\/(pelicula|serie)\/([^\/?#]+)/.exec(String(x && x.url || ""));
     if (!m || x.type === "person") continue;
     cards.push({ slug: m[2], kind: m[1] === "pelicula" ? "movie" : "series", type: String(x.type || ""), title: String(x.title || m[2]), year: Number(x.year) || void 0, poster: String(x.poster || "") });
   }
+  return cards;
+}
+async function searchOne(arg) {
+  const q = String((typeof arg === "string" ? arg : arg && arg.q) || "").trim();
+  const within = typeof arg === "object" && arg && arg.within ? refOf(arg.within) : null;
+  if (q.length < 2) return [];
+  const cards = await cached("s2:" + q.toLowerCase(), () => searchCards(q));
   const kindOnly = within && /^\/(peliculas)$/.test(within.path) ? "movie" : within && /^\/(series|animes|doramas)$/.test(within.path) ? "series" : null;
   return cards.filter((c) => !kindOnly || c.kind === kindOnly).slice(0, 40).map((c) => toItem(c));
 }
