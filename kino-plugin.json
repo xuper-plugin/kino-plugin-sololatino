@@ -1,112 +1,124 @@
 {
-  "id": "sololatino",
-  "name": "SoloLatino",
-  "version": "0.1.8",
-  "apiVersion": 9,
-  "entry": "plugin.js",
-  "icon": "icon.png",
-  "description": "Películas, series, anime y doramas en español latino de sololatino.net: sección propia, géneros, plataformas, búsqueda y varios servidores por título.",
-  "author": "xuper-plugin",
-  "homepage": "https://github.com/xuper-plugin/kino-plugin-sololatino",
-  "hosts": [
-    "sololatino.net",
-    "embed69.org",
-    "voe.sx",
-    "vidhide.com",
-    "vidhidepro.com",
-    "vidhideplus.com",
-    "vidhidefast.com",
-    "callistanise.com",
-    "dintezuvio.com",
-    "minochinos.com",
-    "filelions.to",
-    "morencius.com",
-    "embedwish.com",
-    "hglink.to",
-    "hlswish.com",
-    "streamwish.com",
-    "streamwish.to",
-    "strwish.com",
-    "wishembed.com",
-    "filelions.com",
-    "vibuxer.com",
-    "*.premilkyway.com"
-  ],
-  "capabilities": [
-    "search",
-    "home",
-    "browse",
-    "episodes",
-    "resolve",
-    "download",
-    "scopedSearch"
-  ],
-  "browser": true,
-  "streamHosts": "any",
-  "categories": [
-    "movies",
-    "series"
-  ],
-  "color": "#06B6D4",
-  "section": {
-    "label": "SoloLatino",
-    "labelEn": "SoloLatino"
+ "id": "sololatino",
+ "name": "SoloLatino",
+ "version": "0.2.0",
+ "apiVersion": 20,
+ "entry": "plugin.js",
+ "icon": "icon.png",
+ "description": "Películas, series, anime y doramas en español latino de sololatino.net: sección propia, géneros, plataformas, búsqueda y varios servidores por título.",
+ "author": "xuper-plugin",
+ "homepage": "https://github.com/xuper-plugin/kino-plugin-sololatino",
+ "hosts": [
+  "sololatino.net",
+  "embed69.org",
+  "voe.sx",
+  "vidhide.com",
+  "vidhidepro.com",
+  "vidhideplus.com",
+  "vidhidefast.com",
+  "callistanise.com",
+  "dintezuvio.com",
+  "minochinos.com",
+  "filelions.to",
+  "morencius.com",
+  "embedwish.com",
+  "hglink.to",
+  "hlswish.com",
+  "streamwish.com",
+  "streamwish.to",
+  "strwish.com",
+  "wishembed.com",
+  "filelions.com",
+  "vibuxer.com",
+  "*.premilkyway.com"
+ ],
+ "capabilities": [
+  "search",
+  "home",
+  "browse",
+  "episodes",
+  "resolve",
+  "download",
+  "scopedSearch"
+ ],
+ "browser": true,
+ "streamHosts": "any",
+ "categories": [
+  "movies",
+  "series"
+ ],
+ "color": "#06B6D4",
+ "section": {
+  "label": "SoloLatino",
+  "labelEn": "SoloLatino"
+ },
+ "theme": {
+  "accent": "#06B6D4",
+  "onAccent": "#001418",
+  "background": "#070E18",
+  "surface": "#0F1B2B",
+  "highlight": "#67E8F9"
+ },
+ "settings": [
+  {
+   "key": "audioSection",
+   "type": "section",
+   "label": "Idioma",
+   "labelEn": "Language",
+   "hint": "Cada título puede traer varios idiomas; Kino abre primero el que elijas y, si falla, los demás.",
+   "hintEn": "A title may come in several languages; Kino opens the one you pick first and, if it fails, the others."
   },
-  "theme": {
-    "accent": "#06B6D4",
-    "onAccent": "#001418",
-    "background": "#070E18",
-    "surface": "#0F1B2B",
-    "highlight": "#67E8F9"
-  },
-  "settings": [
+  {
+   "key": "audio",
+   "type": "select",
+   "label": "Idioma preferido",
+   "labelEn": "Preferred language",
+   "default": "lat",
+   "options": [
     {
-      "key": "audioSection",
-      "type": "section",
-      "label": "Idioma",
-      "labelEn": "Language",
-      "hint": "Cada título puede traer varios idiomas; Kino abre primero el que elijas y, si falla, los demás.",
-      "hintEn": "A title may come in several languages; Kino opens the one you pick first and, if it fails, the others."
+     "value": "lat",
+     "label": "Latino",
+     "labelEn": "Latino"
     },
     {
-      "key": "audio",
-      "type": "select",
-      "label": "Idioma preferido",
-      "labelEn": "Preferred language",
-      "default": "lat",
-      "options": [
-        {
-          "value": "lat",
-          "label": "Latino",
-          "labelEn": "Latino"
-        },
-        {
-          "value": "cast",
-          "label": "Castellano",
-          "labelEn": "Castilian"
-        },
-        {
-          "value": "sub",
-          "label": "Subtitulado",
-          "labelEn": "Subtitled"
-        }
-      ]
+     "value": "cast",
+     "label": "Castellano",
+     "labelEn": "Castilian"
     },
     {
-      "key": "info",
-      "type": "status",
-      "label": "Estado",
-      "labelEn": "Status"
-    },
-    {
-      "key": "clearCache",
-      "type": "action",
-      "label": "Vaciar caché",
-      "labelEn": "Clear cache",
-      "confirm": "¿Vaciar la caché de listas?",
-      "confirmEn": "Clear the list cache?"
+     "value": "sub",
+     "label": "Subtitulado",
+     "labelEn": "Subtitled"
     }
-  ],
-  "telemetry": true,
-  "fetchHosts": "any"
+   ]
+  },
+  {
+   "key": "info",
+   "type": "status",
+   "label": "Estado",
+   "labelEn": "Status"
+  },
+  {
+   "key": "clearCache",
+   "type": "action",
+   "label": "Vaciar caché",
+   "labelEn": "Clear cache",
+   "confirm": "¿Vaciar la caché de listas?",
+   "confirmEn": "Clear the list cache?"
+  }
+ ],
+ "telemetry": true,
+ "fetchHosts": "any",
+ "consumes": {
+  "resolver": {
+   "repo": "xuper-plugin/kino-plugin-kino-resolver",
+   "door": "resolver",
+   "calls": [
+    "resolve"
+   ]
+  }
+ },
+ "recommends": [
+  "xuper-plugin/kino-plugin-kino-resolver"
+ ]
 }

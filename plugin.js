@@ -1,9 +1,3 @@
-var __defProp = Object.defineProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-
 // src/sololatino.js
 var SITE = "https://sololatino.net";
 var GENRES = [
@@ -121,13 +115,6 @@ var embedId = (url) => {
 
 // src/embed69.js
 var SITE2 = "https://embed69.org";
-var MAX_DIFFICULTY = 4;
-var POW_CAP = 1e5;
-function solvePow(kino2, challenge, difficulty, cap = POW_CAP) {
-  const zeros = "0".repeat(difficulty);
-  for (let n = 0; n <= cap; n++) if (kino2.crypto.hash("sha256", challenge + n).startsWith(zeros)) return n;
-  return null;
-}
 function decryptLink(kino2, keyHex, b64) {
   const raw = atob(b64);
   let ivHex = "";
@@ -140,24 +127,21 @@ var quoted = (html, name) => {
 };
 function serversOf(kino2, html) {
   const data = /let\s+dataLink\s*=\s*(\[.+\]);/.exec(html);
-  const challenge = quoted(html, "POW_CHALLENGE"), salt = quoted(html, "POW_SALT");
-  const difficulty = Number((/POW_DIFFICULTY\s*=\s*(\d+)/.exec(html) || [])[1]);
-  if (!data || !challenge || salt == null || !Number.isInteger(difficulty) || difficulty > MAX_DIFFICULTY) return [];
+  const challenge = quoted(html, "LINK_CHALLENGE"), salt = quoted(html, "LINK_SALT");
+  if (!data || !challenge || salt == null) return [];
   let langs;
   try {
     langs = JSON.parse(data[1]);
   } catch (_) {
     return [];
   }
-  const n = solvePow(kino2, challenge, difficulty);
-  if (n == null) return [];
-  const keyHex = kino2.crypto.hash("sha256", challenge + n + salt);
+  const keyHex = kino2.crypto.hash("sha256", challenge + salt);
   const rows = [];
   for (const l of langs) {
     for (const e of l && l.sortedEmbeds || []) {
       if (!e || e.servername === "download" || typeof e.link !== "string") continue;
       try {
-        rows.push({ lang: String(l.video_language || ""), server: String(e.servername || ""), url: decryptLink(kino2, keyHex, e.link) });
+        rows.push({ lang: String(l.video_language || ""), server: String(e.servername || ""), url: decryptLink(kino2, keyHex, e.link).replace(/`/g, "").trim() });
       } catch (_) {
       }
     }
@@ -170,196 +154,37 @@ async function servers(kino2, req, id) {
   return serversOf(kino2, await r.text());
 }
 
-// src/extractors/vidhide.js
-var vidhide_exports = {};
-__export(vidhide_exports, {
-  HOSTS: () => HOSTS,
-  extract: () => extract
-});
-
-// src/util/unpack.js
-var ALPHA = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-var toNum = (s, radix) => [...s].reduce((n, ch) => n * radix + ALPHA.indexOf(ch), 0);
-function unpack(source) {
-  const m = /}\s*\(\s*'((?:\\'|[^'])*)'\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*'((?:\\'|[^'])*)'\.split\('\|'\)/.exec(source || "");
-  if (!m) return null;
-  const payload = m[1].replace(/\\'/g, "'");
-  const radix = Number(m[2]);
-  const keys = m[4].split("|");
-  if (radix < 2 || radix > 62) return null;
-  return payload.replace(/\b[0-9a-zA-Z]+\b/g, (w) => {
-    const i = toNum(w, radix);
-    return Number.isInteger(i) && i >= 0 && keys[i] ? keys[i] : w;
-  });
-}
-
-// src/extractors/shared.js
-var HLS_MIME = "application/vnd.apple.mpegurl";
-function fileM3u8(text2, base) {
-  const m = /\bfile\s*:\s*["']([^"']+\.m3u8[^"']*)["']/.exec(text2 || "");
-  return m ? absolute(m[1], base) : null;
-}
-function hlsKey(text2, keys, base) {
-  for (const k of keys) {
-    const m = new RegExp(`["']${k}["']\\s*:\\s*["']([^"']+)["']`).exec(text2 || "");
-    if (m) return absolute(m[1].replace(/\\\//g, "/"), base);
-  }
-  return null;
-}
-function absolute(href, base) {
+// src/extractors/index.js
+var INLINE_HOSTS = [
+  "embedwish.com",
+  "hlswish.com",
+  "streamwish.com",
+  "streamwish.to",
+  "strwish.com",
+  "wishembed.com",
+  "filelions.com",
+  "hglink.to",
+  "vibuxer.com",
+  "vidhide.com",
+  "vidhidepro.com",
+  "vidhideplus.com",
+  "vidhidefast.com",
+  "dintezuvio.com",
+  "minochinos.com",
+  "filelions.to",
+  "morencius.com",
+  "callistanise.com",
+  "voe.sx"
+];
+function extractorFor(embedUrl) {
+  let host;
   try {
-    return new URL(href, base).href;
+    host = new URL(embedUrl).hostname.replace(/^www\./, "");
   } catch (_) {
     return null;
   }
+  return INLINE_HOSTS.some((h) => host === h || host.endsWith("." + h)) ? { name: "resolver" } : null;
 }
-function findIn(html, pick) {
-  return pick(html) || pick(unpack(html) || "") || null;
-}
-function miss(kino2, server, reason) {
-  if (kino2 && typeof kino2.log === "function") kino2.log("[sololatino]", server, reason);
-  return null;
-}
-async function pageText(req, url, headers, kino2, server) {
-  const r = await req(url, { headers });
-  return r.ok ? r.text() : miss(kino2, server || "embed", "status " + r.status);
-}
-var LANG_CODES = [
-  [/^(español|espanol|spanish|castellano|latino|spa|esp?)\b/i, "es"],
-  [/^(english|inglés|ingles|eng?)\b/i, "en"],
-  [/^(portugu[eê]s|portuguese|pt)\b/i, "pt"],
-  // never a bare "por": "Por defecto" is not Portuguese
-  [/^(fran[cç]ais|french|franc[eé]s|fre|fra|fr)\b/i, "fr"],
-  [/^(italiano|italian|ita|it)\b/i, "it"],
-  [/^(deutsch|german|alem[aá]n|ger|deu|de)\b/i, "de"]
-];
-function langCode(label) {
-  const s = String(label || "").trim();
-  for (const [re, code] of LANG_CODES) if (re.test(s)) return code;
-  return null;
-}
-function captionTracks(text2, base) {
-  const m = /["']?\btracks["']?\s*:\s*\[([\s\S]*?)\]/.exec(text2 || "");
-  if (!m) return [];
-  const out = [];
-  for (const [obj] of m[1].matchAll(/\{[^{}]*\}/g)) {
-    const field = (k) => (new RegExp(`["']?${k}["']?\\s*:\\s*["']([^"']*)["']`).exec(obj) || [])[1] || "";
-    const kind = field("kind").toLowerCase();
-    if (kind && kind !== "captions" && kind !== "subtitles") continue;
-    const file = field("file");
-    const format = (/\.(vtt|srt)(?:[?#]|$)/i.exec(file) || [])[1];
-    const label = field("label");
-    const lang = langCode(label);
-    const url = format && lang ? absolute(file, base) : null;
-    if (!url || out.some((t2) => t2.url === url)) continue;
-    out.push({ lang, url, label, format: format.toLowerCase() });
-  }
-  return out;
-}
-function durationMsOf(text2) {
-  const re = /(?<![-\w])duration["']?\s*:\s*["']?(\d+(?:\.\d+)?)(?![\d.])(?!\s*m?s\b)/g;
-  for (const m of String(text2 || "").matchAll(re)) {
-    const ms = Math.round(Number(m[1]) * 1e3);
-    if (ms >= 6e4) return ms;
-  }
-  return null;
-}
-function pageExtras(html, base) {
-  const unpacked = unpack(html) || "";
-  const subs = captionTracks(html, base);
-  const subtitles = subs.length ? subs : captionTracks(unpacked, base);
-  const durationMs = durationMsOf(html) || durationMsOf(unpacked);
-  return { ...subtitles.length ? { subtitles } : {}, ...durationMs ? { durationMs } : {} };
-}
-
-// src/extractors/vidhide.js
-var HOSTS = ["vidhide.com", "vidhidepro.com", "vidhideplus.com", "vidhidefast.com", "dintezuvio.com", "minochinos.com", "filelions.to", "morencius.com"];
-async function extract(embedUrl, req, kino2) {
-  const u = new URL(embedUrl);
-  const html = await pageText(req, embedUrl, { Referer: u.origin + "/" }, kino2, "vidhide");
-  if (html == null) return null;
-  const url = findIn(html, (t2) => hlsKey(t2, ["hls4", "hls2"], u.origin) || fileM3u8(t2, u.origin));
-  if (!url) return miss(kino2, "vidhide", "no playlist in page");
-  return { url, mime: HLS_MIME, headers: { Referer: u.origin + "/", Origin: u.origin }, ...pageExtras(html, u.origin) };
-}
-
-// src/extractors/voe.js
-var voe_exports = {};
-__export(voe_exports, {
-  HOSTS: () => HOSTS2,
-  decodeVoe: () => decodeVoe,
-  extract: () => extract2
-});
-var HOSTS2 = ["voe.sx"];
-var JUNK = ["@$", "^^", "~@", "%?", "*~", "!!", "#&"];
-var rot13 = (s) => s.replace(/[a-z]/gi, (c) => {
-  const b = c <= "Z" ? 65 : 97;
-  return String.fromCharCode((c.charCodeAt(0) - b + 13) % 26 + b);
-});
-function decodeVoe(enc) {
-  let s = rot13(enc);
-  for (const j of JUNK) s = s.split(j).join("");
-  s = atob(s);
-  s = [...s].map((c) => String.fromCharCode(c.charCodeAt(0) - 3)).join("");
-  s = [...s].reverse().join("");
-  return JSON.parse(decodeURIComponent(escape(atob(s))));
-}
-var redirectOf = (html) => (/window\.location\.href\s*=\s*'([^']+)'/.exec(html) || [])[1] || null;
-var humanCheck = (html) => /altcha|Confirm you(?:'|&#0?39;|’)re human/i.test(html);
-async function extract2(embedUrl, req, kino2) {
-  const log = (...a) => {
-    if (kino2) kino2.log("[voe]", ...a);
-  };
-  const first = await req(embedUrl, { headers: { Referer: embedUrl } });
-  if (!first.ok) {
-    log("embed", first.status);
-    return null;
-  }
-  let html = first.text();
-  const next = redirectOf(html);
-  if (next) {
-    try {
-      const r = await req(next, { headers: { Referer: embedUrl } });
-      if (!r.ok) {
-        log("player", r.status);
-        return null;
-      }
-      html = r.text();
-    } catch (e) {
-      if (e && e.code === "host_not_allowed") {
-        log("rotating host not reachable here");
-        return void 0;
-      }
-      throw e;
-    }
-  }
-  if (humanCheck(html)) {
-    log("human check");
-    return null;
-  }
-  const j = /<script type="application\/json">\s*\["([^"]+)"\]/.exec(html);
-  if (j) {
-    try {
-      const d = decodeVoe(j[1]);
-      const url = d.source || d.direct_access_url;
-      if (url) return { url, mime: /\.mp4(?:[?#]|$)/.test(url) ? "video/mp4" : HLS_MIME, headers: { Referer: embedUrl } };
-    } catch (_) {
-    }
-  }
-  const h = /'hls'\s*:\s*'([^']+)'/.exec(html) || /(https?:\/\/[^"'\s]+\.mp4[^"'\s]*)/.exec(html);
-  if (!h) {
-    log("no stream in page");
-    return null;
-  }
-  return { url: h[1], mime: /\.mp4(?:[?#]|$)/.test(h[1]) ? "video/mp4" : HLS_MIME, headers: { Referer: embedUrl } };
-}
-
-// src/extractors/streamwish.js
-var streamwish_exports = {};
-__export(streamwish_exports, {
-  HOSTS: () => HOSTS3,
-  extract: () => extract3
-});
 
 // src/util/http.js
 var UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
@@ -374,35 +199,6 @@ function makeReq(kino2, { deadline }) {
   req.left = () => Math.max(0, deadline - Date.now());
   return req;
 }
-
-// src/extractors/streamwish.js
-var HOSTS3 = ["embedwish.com", "hlswish.com", "streamwish.com", "streamwish.to", "strwish.com", "wishembed.com", "filelions.com", "hglink.to", "vibuxer.com"];
-async function extract3(embedUrl, req, kino2) {
-  const u = new URL(embedUrl);
-  if (u.hostname === "hglink.to") u.hostname = "vibuxer.com";
-  const referer = u.origin + "/";
-  const html = await pageText(req, u.href, { Referer: referer }, kino2, "streamwish");
-  if (html == null) return null;
-  const url = findIn(html, (t2) => hlsKey(t2, ["hls4", "hls2", "hls3"], u.origin) || fileM3u8(t2, u.origin));
-  if (!url) return miss(kino2, "streamwish", "no playlist in page");
-  return { url, mime: HLS_MIME, headers: { "User-Agent": UA, Referer: referer }, ...pageExtras(html, u.origin) };
-}
-
-// src/extractors/index.js
-var TABLE = { vidhide: vidhide_exports, streamwish: streamwish_exports, voe: voe_exports };
-function extractorFor(embedUrl) {
-  let host;
-  try {
-    host = new URL(embedUrl).hostname.replace(/^www\./, "");
-  } catch (_) {
-    return null;
-  }
-  for (const [name, mod] of Object.entries(TABLE)) {
-    if (mod.HOSTS.some((h) => host === h || host.endsWith("." + h))) return { name, extract: mod.extract };
-  }
-  return null;
-}
-var HOSTS4 = Object.values(TABLE).flatMap((m) => m.HOSTS);
 
 // src/util/terms.js
 function searchTerms(arg) {
@@ -782,10 +578,21 @@ async function serversOf2(pageUrl, req) {
   return rows.map((s, i) => ({ ...s, i })).sort((a, b) => rank(a) - rank(b) || a.i - b.i).slice(0, MAX_COPIES);
 }
 async function open(server, req, budget) {
-  const ex = extractorFor(server.url);
-  if (ex) {
-    const out = await ex.extract(server.url, req, kino);
-    if (out !== void 0) return out;
+  try {
+    const res = await kino.plugins.call("resolver", "resolve", { url: server.url, referer: SITE + "/" });
+    const s = (res && Array.isArray(res.streams) ? res.streams : []).find((x) => x && x.url);
+    if (s) {
+      const headers = {};
+      if (s.referer) headers.Referer = s.referer;
+      if (Array.isArray(s.headers)) {
+        for (const h of s.headers) if (h && h.name) headers[h.name] = String(h.value);
+      }
+      const out = { url: s.url, mime: s.kind === "hls" ? HLS : /\.mp4(\?|$)/i.test(s.url) ? "video/mp4" : HLS, headers };
+      if (res.subtitles && res.subtitles.length) out.subtitles = res.subtitles;
+      return out;
+    }
+    if (res && res.error === "dead") return null;
+  } catch (_) {
   }
   if (!kino.browser || typeof kino.browser.capture !== "function" || budget.captures <= 0) return null;
   budget.captures -= 1;

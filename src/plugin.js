@@ -294,11 +294,21 @@ async function serversOf(pageUrl, req) {
 }
 
 async function open(server, req, budget) {
-  const ex = extractorFor(server.url);
-  if (ex) {
-    const out = await ex.extract(server.url, req, kino);
-    if (out !== undefined) return out; // undefined: the extractor cannot reach its host from here, so the hidden browser may try
-  }
+  // The shared kino-resolver does the extraction (its provider door); capture is the fallback for gate hosts (VOE,
+  // filemoon, doodstream) and for when the resolver is not installed.
+  try {
+    const res = await kino.plugins.call("resolver", "resolve", { url: server.url, referer: SITE + "/" });
+    const s = (res && Array.isArray(res.streams) ? res.streams : []).find((x) => x && x.url);
+    if (s) {
+      const headers = {};
+      if (s.referer) headers.Referer = s.referer;
+      if (Array.isArray(s.headers)) { for (const h of s.headers) if (h && h.name) headers[h.name] = String(h.value); }
+      const out = { url: s.url, mime: s.kind === "hls" ? HLS : (/\.mp4(\?|$)/i.test(s.url) ? "video/mp4" : HLS), headers };
+      if (res.subtitles && res.subtitles.length) out.subtitles = res.subtitles;
+      return out;
+    }
+    if (res && res.error === "dead") return null; // a dead host: don't spend a capture on it
+  } catch (_) { /* provider_missing / failed: the hidden browser may still reach it */ }
   if (!kino.browser || typeof kino.browser.capture !== "function" || budget.captures <= 0) return null;
   budget.captures -= 1;
   const page = await kino.browser.capture(server.url, { timeoutMs: CAPTURE_MS, match: "\\.m3u8|\\.mp4", headers: { Referer: SITE + "/" } });
