@@ -356,7 +356,8 @@ var STRINGS = {
     noEpisodes: "No se encontraron episodios de esta serie.",
     noStreams: "Ning\xFAn servidor de este t\xEDtulo abri\xF3. Prueba m\xE1s tarde.",
     statusLine: "Listas guardadas: {n}",
-    cacheCleared: "Cach\xE9 vaciada."
+    cacheCleared: "Cach\xE9 vaciada.",
+    needResolver: "Para reproducir, abre SoloLatino desde el men\xFA e instala el motor de reproducci\xF3n que te pedir\xE1."
   },
   en: {
     news: "What's new",
@@ -381,7 +382,8 @@ var STRINGS = {
     noEpisodes: "No episodes found for this series.",
     noStreams: "No server of this title opened. Try again later.",
     statusLine: "Lists kept: {n}",
-    cacheCleared: "Cache cleared."
+    cacheCleared: "Cache cleared.",
+    needResolver: "To play, open SoloLatino from the menu and install the playback engine it asks for."
   }
 };
 var t = (key) => {
@@ -571,6 +573,56 @@ async function episodes(ref) {
     })
   };
 }
+var RESOLVER_REPO = "xuper-plugin/kino-plugin-kino-resolver";
+var SUPPORT_URL = "https://ko-fi.com/xuperplugins";
+async function resolverInstalled() {
+  try {
+    await kino.plugins.call("resolver", "normalizeHost", { url: "https://probe.invalid/" });
+    return true;
+  } catch (e) {
+    return (e && e.code) !== "provider_missing";
+  }
+}
+function supportNode(device) {
+  if (device === "tv") return { type: "QrImage", value: SUPPORT_URL, size: "large", labelText: "Si te gusta mi trabajo, escan\xE9alo y ap\xF3yame", labelTextEn: "If you like my work, scan it and support me" };
+  return { type: "ElevatedButton", key: "donate", icon: "heart", labelText: "Si te gusta mi trabajo, ap\xF3yame", labelTextEn: "If you like my work, support me", onPressed: { go: { url: { href: SUPPORT_URL } } } };
+}
+function installGateView(device) {
+  return {
+    type: "Scaffold",
+    key: "sololatino-install",
+    body: { type: "SingleChildScrollView", key: "installScroll", children: [
+      { type: "Column", padding: 24, gap: 16, crossAxisAlignment: "stretch", children: [
+        { type: "Text", text: "Necesitas el motor de reproducci\xF3n", textEn: "You need the playback engine", style: "h3" },
+        { type: "Text", color: "secondary", text: "SoloLatino reproduce a trav\xE9s de Kino Resolver (gratis). Inst\xE1lalo una vez y sirve para este y para otros plugins de sitios.", textEn: "SoloLatino plays through Kino Resolver (free). Install it once and it works here and in other site plugins." },
+        { type: "ElevatedButton", key: "installResolver", labelText: "Instalar Kino Resolver", labelTextEn: "Install Kino Resolver", onPressed: { go: { installPlugin: { repo: RESOLVER_REPO } } } },
+        supportNode(device)
+      ] }
+    ] }
+  };
+}
+function readyView(device) {
+  return {
+    type: "Scaffold",
+    key: "sololatino-ready",
+    body: { type: "SingleChildScrollView", key: "readyScroll", children: [
+      { type: "Column", padding: 24, gap: 16, crossAxisAlignment: "stretch", children: [
+        { type: "Text", text: "Todo listo", textEn: "All set", style: "h3" },
+        { type: "Text", color: "secondary", text: "Explora SoloLatino desde el inicio de Kino o busca un t\xEDtulo.", textEn: "Browse SoloLatino from Kino's home, or search for a title." },
+        supportNode(device)
+      ] }
+    ] }
+  };
+}
+async function screen(ctx) {
+  await null;
+  const c = ctx && typeof ctx === "object" ? ctx : {};
+  return c.installed && c.installed[RESOLVER_REPO] ? readyView(c.device) : installGateView(c.device);
+}
+async function screenEvent() {
+  await null;
+  return {};
+}
 var LANG_NAME = { LAT: "lat", SUB: "sub", CAST: "cast", ESP: "cast" };
 var SERVER_NAME = { vidhide: "VidHide", streamwish: "StreamWish", voe: "VOE", filemoon: "Filemoon", mixdrop: "MixDrop", streamtape: "StreamTape" };
 async function playerUrl(token, pageUrl) {
@@ -655,6 +707,7 @@ async function resolve(ref) {
   const only = m ? Number(m[2]) : null;
   const pageUrl = pageOf(base);
   if (!pageUrl) throw kino.error("not_found", "unknown ref: " + ref);
+  if (!await resolverInstalled()) throw kino.error("unavailable", "resolver missing", { userMessage: t("needResolver") });
   const req = makeReq(kino, { deadline: Date.now() + RESOLVE_MS });
   const servers2 = await serversOf2(pageUrl, req);
   if (!servers2.length) throw kino.error("not_found", "no servers on " + pageUrl, { userMessage: t("noStreams") });
@@ -714,6 +767,8 @@ export {
   episodes,
   home,
   resolve,
+  screen,
+  screenEvent,
   search,
   section,
   settingsStatus

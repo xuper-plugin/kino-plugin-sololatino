@@ -1,7 +1,7 @@
 {
  "id": "sololatino",
  "name": "SoloLatino",
- "version": "0.2.1",
+ "version": "0.2.2",
  "apiVersion": 20,
  "entry": "plugin.js",
  "icon": "icon.png",
@@ -39,7 +39,8 @@
   "episodes",
   "resolve",
   "download",
-  "scopedSearch"
+  "scopedSearch",
+  "screen"
  ],
  "browser": true,
  "streamHosts": "any",
@@ -120,5 +121,20 @@
  },
  "recommends": [
   "xuper-plugin/kino-plugin-kino-resolver"
- ]
+ ],
+ "screen": {
+  "label": "SoloLatino",
+  "labelEn": "SoloLatino",
+  "icon": "movie",
+  "menuOpens": "screen",
+  "opensFrom": [
+   "menu",
+   "settings"
+  ],
+  "settingsButton": {
+   "label": "Abrir SoloLatino",
+   "labelEn": "Open SoloLatino"
+  },
+  "settingsIn": "screen"
+ }
 }
