@@ -3,6 +3,8 @@
 // author). Until 2026-11 the key came from a proof of work (POW_CHALLENGE/POW_SALT/POW_DIFFICULTY); the site dropped that and now
 // wraps each decrypted link in backticks.
 
+import { getThroughAnubis } from "./anubis.js";
+
 const SITE = "https://embed69.org";
 
 /** A link is base64 of 16 IV bytes followed by the AES-256-CBC ciphertext. */
@@ -34,7 +36,8 @@ export function serversOf(kino, html) {
 }
 
 export async function servers(kino, req, id) {
-  const r = await req(`${SITE}/f/${id}`, { headers: { Referer: "https://sololatino.net/" } });
-  if (!r.ok) return [];
-  return serversOf(kino, await r.text());
+  // embed69 sits behind Anubis (a proof-of-work anti-bot) since 2026-11: getThroughAnubis solves it in the
+  // background so a plain fetch reads the page. The partner Referer is what embed69 answers once past the gate.
+  const html = await getThroughAnubis(kino, req, `${SITE}/f/${id}`, { headers: { Referer: "https://sololatino.net/" } });
+  return html ? serversOf(kino, html) : [];
 }
