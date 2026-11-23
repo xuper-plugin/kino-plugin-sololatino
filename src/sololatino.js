@@ -16,7 +16,13 @@ export const NETWORKS = [
   ["apple-tv", "Apple TV+"], ["hulu", "Hulu"], ["nbc", "NBC"],
 ];
 
-const decode = (s) => String(s || "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#0?39;|&#x27;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ");
+const NAMED_ENTITIES = { ndash: "–", mdash: "—", hellip: "…", lsquo: "‘", rsquo: "’", ldquo: "“", rdquo: "”", nbsp: " ", iexcl: "¡", iquest: "¿", laquo: "«", raquo: "»", aacute: "á", eacute: "é", iacute: "í", oacute: "ó", uacute: "ú", ntilde: "ñ", Aacute: "Á", Eacute: "É", Iacute: "Í", Oacute: "Ó", Uacute: "Ú", Ntilde: "Ñ", uuml: "ü" };
+/** Numeric entities (WordPress writes "&#8211;" for the dash in "Rammstein – Live in Mexico City") and the usual named ones. */
+const decodeMore = (s) => s
+  .replace(/&#([0-9]{1,7});/g, (m, n) => { const c = Number(n); return c > 0 && c <= 0x10ffff ? String.fromCodePoint(c) : m; })
+  .replace(/&#x([0-9a-f]{1,6});/gi, (m, h) => { const c = parseInt(h, 16); return c > 0 && c <= 0x10ffff ? String.fromCodePoint(c) : m; })
+  .replace(/&([a-z]+);/gi, (m, k) => NAMED_ENTITIES[k] ?? m);
+const decode = (s) => decodeMore(String(s || "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#0?39;|&#x27;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " "));
 const text = (s) => decode(String(s || "").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
 
 /** The cards of a listing: `{ slug, kind: "movie"|"series", badge, title, year, poster, rating }`. */

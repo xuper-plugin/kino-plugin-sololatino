@@ -30,7 +30,15 @@ var NETWORKS = [
   ["hulu", "Hulu"],
   ["nbc", "NBC"]
 ];
-var decode = (s) => String(s || "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#0?39;|&#x27;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ");
+var NAMED_ENTITIES = { ndash: "\u2013", mdash: "\u2014", hellip: "\u2026", lsquo: "\u2018", rsquo: "\u2019", ldquo: "\u201C", rdquo: "\u201D", nbsp: " ", iexcl: "\xA1", iquest: "\xBF", laquo: "\xAB", raquo: "\xBB", aacute: "\xE1", eacute: "\xE9", iacute: "\xED", oacute: "\xF3", uacute: "\xFA", ntilde: "\xF1", Aacute: "\xC1", Eacute: "\xC9", Iacute: "\xCD", Oacute: "\xD3", Uacute: "\xDA", Ntilde: "\xD1", uuml: "\xFC" };
+var decodeMore = (s) => s.replace(/&#([0-9]{1,7});/g, (m, n) => {
+  const c = Number(n);
+  return c > 0 && c <= 1114111 ? String.fromCodePoint(c) : m;
+}).replace(/&#x([0-9a-f]{1,6});/gi, (m, h) => {
+  const c = parseInt(h, 16);
+  return c > 0 && c <= 1114111 ? String.fromCodePoint(c) : m;
+}).replace(/&([a-z]+);/gi, (m, k) => NAMED_ENTITIES[k] ?? m);
+var decode = (s) => decodeMore(String(s || "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#0?39;|&#x27;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " "));
 var text = (s) => decode(String(s || "").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
 function parseCards(html) {
   const out = [];
@@ -1452,12 +1460,13 @@ async function searchWithTerms(arg, one) {
 
 // src/util/probe.js
 var PEEK_BYTES = 2048;
-async function playable(kino2, out, ms = 6e3) {
+async function peek(kino2, out, ms = 6e3) {
   try {
     const r = await kino2.fetch(out.url, { headers: { Range: `bytes=0-${PEEK_BYTES - 1}`, ...out.headers || {} }, timeoutMs: ms, maxBytes: PEEK_BYTES });
-    return r.ok || r.status === 401 || r.status === 403 || r.status === 416;
+    return r.ok || r.status === 401 || r.status === 403 || r.status === 416 ? "ok" : "dead";
   } catch (e) {
-    return !!(e && (e.code === "host_not_allowed" || e.code === "too_large"));
+    if (e && (e.code === "host_not_allowed" || e.code === "too_large")) return "ok";
+    return e && e.code === "timeout" ? "slow" : "dead";
   }
 }
 
@@ -1886,6 +1895,18 @@ async function resolve(ref) {
   const servers2 = await serversOf2(pageUrl, req);
   if (!servers2.length) throw kino.error("not_found", "no servers on " + pageUrl, { userMessage: t2("noStreams") });
   const budget = { captures: MAX_CAPTURES };
+  const deliver = (i, out) => {
+    const s = servers2[i];
+    const stream = { url: out.url, mime: out.mime, headers: { "User-Agent": UA, ...out.headers || {} }, label: labelOf(s) };
+    if (out.subtitles) stream.subtitles = out.subtitles;
+    if (out.durationMs) stream.durationMs = out.durationMs;
+    if (only == null) {
+      const others = servers2.map((_, j) => j).filter((j) => j !== i);
+      if (others.length) stream.alternatives = others.map((j) => ({ ref: `c:${base}@${j}`, label: labelOf(servers2[j]) }));
+    }
+    return stream;
+  };
+  let slow = null;
   const failures = [];
   for (const i of only != null ? [only] : servers2.map((_, k) => k)) {
     const s = servers2[i];
@@ -1896,21 +1917,26 @@ async function resolve(ref) {
         failures.push(`${s.server}: no stream`);
         continue;
       }
-      if (!out.captured && !await playable(kino, { url: out.url, headers: { "User-Agent": UA, ...out.headers || {} } })) {
-        failures.push(`${s.server}: address does not answer`);
-        continue;
+      if (!out.captured) {
+        const answer = await peek(kino, { url: out.url, headers: { "User-Agent": UA, ...out.headers || {} } });
+        if (answer === "slow") {
+          if (!slow) slow = { i, out };
+          failures.push(`${s.server}: slow`);
+          continue;
+        }
+        if (answer !== "ok") {
+          failures.push(`${s.server}: address does not answer`);
+          continue;
+        }
       }
-      const stream = { url: out.url, mime: out.mime, headers: { "User-Agent": UA, ...out.headers || {} }, label: labelOf(s) };
-      if (out.subtitles) stream.subtitles = out.subtitles;
-      if (out.durationMs) stream.durationMs = out.durationMs;
-      if (only == null) {
-        const others = servers2.map((_, j) => j).filter((j) => j !== i);
-        if (others.length) stream.alternatives = others.map((j) => ({ ref: `c:${base}@${j}`, label: labelOf(servers2[j]) }));
-      }
-      return stream;
+      return deliver(i, out);
     } catch (e) {
       failures.push(`${s.server}: ${e && e.code || ""} ${e && e.message || e}`.trim());
     }
+  }
+  if (slow) {
+    kino.log(`resolve ${base}: only a slow server answered (${failures.join("; ")})`);
+    return deliver(slow.i, slow.out);
   }
   kino.log(`resolve ${base} failed: ${failures.join("; ")}`);
   throw kino.error("not_found", "no server opened for " + pageUrl, { userMessage: t2("noStreams") });
