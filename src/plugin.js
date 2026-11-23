@@ -6,9 +6,9 @@
 
 import { SITE, GENRES, NETWORKS, parseCards, parseTitle, parsePlayers, embedId } from "./sololatino.js";
 import * as embed69 from "./embed69.js";
-import { extractorFor } from "./extractors/index.js";
 import { makeReq, UA } from "./util/http.js";
 import { makeStandardScreen } from "./std/index.js";
+import { rankServers } from "./std/rank.js";
 import { LOGO, LOGO_ASPECT } from "./logo.js";
 import { searchWithTerms } from "./util/terms.js";
 import { peek } from "./util/probe.js";
@@ -321,10 +321,10 @@ async function serversOf(pageUrl, req) {
   let pref = "lat";
   try { pref = String(kino.config.get("audio") || "lat"); } catch (_) { pref = "lat"; }
   const lang = (s) => LANG_NAME[s.lang.toUpperCase()] || "sub";
-  // StreamWish answers in about a second everywhere; VidHide's host (morencius.com) took 8 s to time out on a phone, so it goes second
-  const cost = (s) => (!extractorFor(s.url) ? 2 : /vidhide/i.test(s.server) ? 1 : 0);
-  const rank = (s) => (lang(s) === pref ? 0 : lang(s) === "lat" ? 1 : lang(s) === "cast" ? 2 : 3) * 3 + cost(s);
-  return rows.map((s, i) => ({ ...s, i })).sort((a, b) => rank(a) - rank(b) || a.i - b.i).slice(0, MAX_COPIES);
+  // The person's language first; within it, the hoster kino-resolver ranks best (its rank call: how well each one plays,
+  // from the playback audit), so one resolver update re-orders every plugin. An older resolver: the order the site gave.
+  const langRank = (s) => (lang(s) === pref ? 0 : lang(s) === "lat" ? 1 : lang(s) === "cast" ? 2 : 3);
+  return (await rankServers(kino, rows, (s) => s.url, langRank)).slice(0, MAX_COPIES);
 }
 
 async function open(server, req, budget) {
