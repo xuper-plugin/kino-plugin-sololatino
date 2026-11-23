@@ -255,7 +255,7 @@ function makeReq(kino2, { deadline }) {
 }
 
 // src/browse/model.js
-var TAB_IDS = ["inicio"];
+var TAB_IDS = ["inicio", "peliculas", "series"];
 var MAX_SLIDES = 6;
 var MAX_RAILS = 8;
 var MAX_RAIL_ITEMS = 20;
@@ -1793,7 +1793,8 @@ function installGateView(device) {
 var browseInstance = null;
 var browseScreen = () => browseInstance ?? (browseInstance = makeBrowse({
   kino,
-  loadTab: async () => ({ rows: await home() }),
+  // Inicio is the Home rows; Películas and Series are the section's own tabs of the same name.
+  loadTab: async (tab) => ({ rows: tab === "peliculas" || tab === "series" ? (await section({ tab })).rows : await home() }),
   searchTitles: (q) => search({ q })
 }));
 async function screen(ctx) {

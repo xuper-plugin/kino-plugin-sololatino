@@ -285,7 +285,8 @@ function installGateView(device) {
 let browseInstance = null;
 const browseScreen = () => (browseInstance ??= makeBrowse({
   kino,
-  loadTab: async () => ({ rows: await home() }),
+  // Inicio is the Home rows; Películas and Series are the section's own tabs of the same name.
+  loadTab: async (tab) => ({ rows: tab === "peliculas" || tab === "series" ? (await section({ tab })).rows : await home() }),
   searchTitles: (q) => search({ q }),
 }));
 
