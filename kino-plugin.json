@@ -1,8 +1,8 @@
 {
  "id": "sololatino",
  "name": "SoloLatino",
- "version": "0.2.7",
- "apiVersion": 20,
+ "version": "0.3.0",
+ "apiVersion": 30,
  "entry": "plugin.js",
  "icon": "icon.png",
  "description": "Películas, series, anime y doramas en español latino de sololatino.net: sección propia, géneros, plataformas, búsqueda y varios servidores por título.",

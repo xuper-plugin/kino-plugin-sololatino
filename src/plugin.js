@@ -8,7 +8,8 @@ import { SITE, GENRES, NETWORKS, parseCards, parseTitle, parsePlayers, embedId }
 import * as embed69 from "./embed69.js";
 import { extractorFor } from "./extractors/index.js";
 import { makeReq, UA } from "./util/http.js";
-import { makeBrowse } from "./browse/index.js";
+import { makeStandardScreen } from "./std/index.js";
+import { LOGO, LOGO_ASPECT } from "./logo.js";
 import { searchWithTerms } from "./util/terms.js";
 import { peek } from "./util/probe.js";
 import { homeWithin } from "./util/home.js";
@@ -248,10 +249,7 @@ export async function episodes(ref) {
   };
 }
 
-// ---- Kino Resolver install gate ----
-
-const RESOLVER_REPO = "xuper-plugin/kino-plugin-kino-resolver";
-const SUPPORT_URL = "https://ko-fi.com/xuperplugins";
+// ---- the screen: the standard xuper-plugin screen (src/std) ----
 
 /** True when the shared kino-resolver is installed (a cheap door probe; only provider_missing means "not installed"). */
 async function resolverInstalled() {
@@ -259,49 +257,26 @@ async function resolverInstalled() {
   catch (e) { return (e && e.code) !== "provider_missing"; }
 }
 
-/** The donate affordance under every install button: a QR on TV (a TV can't open a link well), a heart button on phone/desktop. */
-function supportNode(device) {
-  if (device === "tv") return { type: "QrImage", value: SUPPORT_URL, size: "large", labelText: "Si te gusta mi trabajo, escanéalo y apóyame", labelTextEn: "If you like my work, scan it and support me" };
-  return { type: "ElevatedButton", key: "donate", icon: "heart", labelText: "Si te gusta mi trabajo, apóyame", labelTextEn: "If you like my work, support me", onPressed: { go: { url: { href: SUPPORT_URL } } } };
-}
-
-/** The install gate: the first screen while the shared kino-resolver (the engine SoloLatino plays through) is not installed. The
- *  donate button sits under the install button, as on every gate. */
-function installGateView(device) {
-  return { type: "Scaffold", key: "sololatino-install",
-    body: { type: "SingleChildScrollView", key: "installScroll", children: [
-      { type: "Column", padding: 24, gap: 16, crossAxisAlignment: "stretch", children: [
-        { type: "Text", text: "Necesitas el motor de reproducción", textEn: "You need the playback engine", style: "h3" },
-        { type: "Text", color: "secondary", text: "SoloLatino reproduce a través de Kino Resolver (gratis). Instálalo una vez y sirve para este y para otros plugins de sitios.", textEn: "SoloLatino plays through Kino Resolver (free). Install it once and it works here and in other site plugins." },
-        { type: "ElevatedButton", key: "installResolver", labelText: "Instalar Kino Resolver", labelTextEn: "Install Kino Resolver", onPressed: { go: { installPlugin: { repo: RESOLVER_REPO } } } },
-        supportNode(device),
-      ] },
-    ] },
-  };
-}
-
-/** The rich browse screen (modelled on Latino's): one "inicio" tab of Home's rows, search and detail pages, built
- *  from this plugin's own home()/search(). It draws from what it holds and fills as the sources answer. */
-let browseInstance = null;
-const browseScreen = () => (browseInstance ??= makeBrowse({
-  kino,
-  // Inicio is the Home rows; Películas and Series are the section's own tabs of the same name.
+// SoloLatino delegates every hoster to kino-resolver (the hidden-browser capture is only a fallback), so it does not play without it: the screen is the install gate while it is missing, and resolve() refuses.
+let std = null;
+const standard = () => (std ??= makeStandardScreen({
+  kino, name: "SoloLatino", logo: LOGO, logoAspect: LOGO_ASPECT, needsResolver: true, hasSettings: true,
+  tabs: [
+    { id: "inicio", label: "Inicio", labelEn: "Home" },
+    { id: "peliculas", label: "Películas", labelEn: "Movies" },
+    { id: "series", label: "Series", labelEn: "Series" },
+  ],
   loadTab: async (tab) => ({ rows: tab === "peliculas" || tab === "series" ? (await section({ tab })).rows : await home() }),
-  searchTitles: (q) => search({ q }),
 }));
 
-/** `screen(ctx)`: the install gate while the resolver is missing, the rich browse screen once it is there. */
 export async function screen(ctx) {
   await null;
-  const c = ctx && typeof ctx === "object" ? ctx : {};
-  if (!(c.installed && c.installed[RESOLVER_REPO])) return installGateView(c.device);
-  return browseScreen().view(c);
+  return standard().screen(ctx && typeof ctx === "object" ? ctx : {});
 }
 
-/** `screenEvent(ev)`: the browse screen's events (tab load, search, detail navigation). */
 export async function screenEvent(ev) {
   await null;
-  return browseScreen().event(ev && typeof ev === "object" ? ev : {});
+  return standard().screenEvent(ev && typeof ev === "object" ? ev : {});
 }
 
 // ---- resolve ----
