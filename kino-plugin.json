@@ -1,7 +1,7 @@
 {
  "id": "sololatino",
  "name": "SoloLatino",
- "version": "0.3.5",
+ "version": "0.3.6",
  "apiVersion": 30,
  "entry": "plugin.js",
  "icon": "icon.png",
@@ -135,6 +135,6 @@
    "label": "Abrir SoloLatino",
    "labelEn": "Open SoloLatino"
   },
-  "settingsIn": "screen"
+  "settingsIn": "both"
  }
 }
