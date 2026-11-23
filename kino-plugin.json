@@ -1,7 +1,7 @@
 {
   "id": "sololatino",
   "name": "SoloLatino",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "apiVersion": 30,
   "entry": "plugin.js",
   "icon": "icon.png",
@@ -166,6 +166,6 @@
   },
   "signature": {
     "authorKey": "6693946bd5c56196960959c4b9665fad5094374bcb85ddb282f8bf762c835263",
-    "value": "73f3060e245d0731abc220e34379d2e1c4c136f1e5dad9d405782558fa24aae760c3c2099b8dd811b21ced95139354c0c1829423978411c0674949d523bdd009"
+    "value": "42b47c9a7176c8a007183b5f902f3b71330f761883473cec478aca152c99bf977b601ce7fbaae3cefb0c1f2118e6498a8001dd25d004627c99ee87d28e904a0e"
   }
 }
