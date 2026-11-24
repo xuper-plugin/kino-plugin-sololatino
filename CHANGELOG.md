@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.11
+
+- Categorías: every genre tile now shows a picture (a well-known TMDB backdrop per genre, and a famous show for each network, no extra requests)
+
 ## 0.3.10
 
 - Servers ordered by how well each hoster plays (kino-resolver's ranking), in your language first (std 1.9.2)
