@@ -32,7 +32,7 @@ const HLS = "application/vnd.apple.mpegurl";
 
 const STRINGS = {
   es: {
-    news: "Novedades", movies: "Películas", series: "Series", anime: "Anime", doramas: "Doramas", platforms: "Plataformas", genres: "Géneros",
+    news: "Novedades", movies: "Películas", series: "Series", anime: "Anime", kids: "Infantil", doramas: "Doramas", platforms: "Plataformas", genres: "Géneros",
     recentMovies: "Películas recientes", recentSeries: "Series recientes", popularMovies: "Películas populares", topSeries: "Series mejor valoradas", more: "Más",
     lat: "Latino", sub: "Subtitulado", cast: "Castellano", season: "Temporada", episode: "Episodio",
     heroText: "Películas y series en español latino, con estrenos al día.",
@@ -41,7 +41,7 @@ const STRINGS = {
     needResolver: "Para reproducir, abre SoloLatino desde el menú e instala el motor de reproducción que te pedirá.",
   },
   en: {
-    news: "What's new", movies: "Movies", series: "Series", anime: "Anime", doramas: "Doramas", platforms: "Platforms", genres: "Genres",
+    news: "What's new", movies: "Movies", series: "Series", anime: "Anime", kids: "Kids", doramas: "Doramas", platforms: "Platforms", genres: "Genres",
     recentMovies: "Recent movies", recentSeries: "Recent series", popularMovies: "Popular movies", topSeries: "Top rated series", more: "More",
     lat: "Latino", sub: "Subtitled", cast: "Castilian", season: "Season", episode: "Episode",
     heroText: "Movies and series in Latin American Spanish, with new releases.",
@@ -102,6 +102,7 @@ const LISTS = {
   mejores: { path: "/series", query: "sort=rating", titleKey: "topSeries", genre: "series" },
   animes: { path: "/animes", titleKey: "anime", genre: "anime" },
   doramas: { path: "/doramas", titleKey: "doramas", genre: "doramas" },
+  infantil: { path: "/genero/familia", titleKey: "kids", genre: "infantil" },
 };
 
 /** `{ path, query, title, genre }` for a browse ref ("list:<name>", "genre:<slug>" or "net:<slug>"); null for anything else. */
@@ -133,15 +134,14 @@ async function rowOf(id, ref, genre) {
 
 // ---- exports ----
 
+/** The Home's rows, each tagged (LISTS' `genre`) with the type Kino files it under: Películas, Series, Anime (the site's newest first), Infantil (its Familia genre). */
+export const HOME_ROWS = [["peliculas", "list:peliculas"], ["series", "list:series"], ["animes", "list:animes"], ["infantil", "list:infantil"], ["doramas", "list:doramas"], ["populares", "list:populares"], ["netflix", "net:netflix"]];
+
+/** The type tag each Home row carries, by row id (what Kino reads to shelve its titles). */
+export const homeRowTags = () => Object.fromEntries(HOME_ROWS.map(([id, ref]) => [id, refOf(ref).genre || "series"]));
+
 export async function home() {
-  return homeWithin([
-    () => safeRow("peliculas", () => rowOf("peliculas", "list:peliculas")),
-    () => safeRow("series", () => rowOf("series", "list:series")),
-    () => safeRow("animes", () => rowOf("animes", "list:animes")),
-    () => safeRow("doramas", () => rowOf("doramas", "list:doramas")),
-    () => safeRow("populares", () => rowOf("populares", "list:populares")),
-    () => safeRow("netflix", () => rowOf("netflix", "net:netflix")),
-  ]);
+  return homeWithin(HOME_ROWS.map(([id, ref]) => () => safeRow(id, () => rowOf(id, ref))));
 }
 
 export async function browse(ref, cursor) {

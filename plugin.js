@@ -1163,6 +1163,7 @@ var STRINGS = {
     movies: "Pel\xEDculas",
     series: "Series",
     anime: "Anime",
+    kids: "Infantil",
     doramas: "Doramas",
     platforms: "Plataformas",
     genres: "G\xE9neros",
@@ -1189,6 +1190,7 @@ var STRINGS = {
     movies: "Movies",
     series: "Series",
     anime: "Anime",
+    kids: "Kids",
     doramas: "Doramas",
     platforms: "Platforms",
     genres: "Genres",
@@ -1262,7 +1264,8 @@ var LISTS = {
   series: { path: "/series", titleKey: "recentSeries", genre: "series" },
   mejores: { path: "/series", query: "sort=rating", titleKey: "topSeries", genre: "series" },
   animes: { path: "/animes", titleKey: "anime", genre: "anime" },
-  doramas: { path: "/doramas", titleKey: "doramas", genre: "doramas" }
+  doramas: { path: "/doramas", titleKey: "doramas", genre: "doramas" },
+  infantil: { path: "/genero/familia", titleKey: "kids", genre: "infantil" }
 };
 function refOf(ref) {
   const m = /^(list|genre|net):([a-z0-9-]+)$/.exec(String(ref || ""));
@@ -1298,15 +1301,10 @@ async function rowOf(id, ref, genre) {
   const items = cards.slice(0, 20).map((c) => toItem(c, def.genreName));
   return items.length ? { id, title: def.title, items, ref, genre: genre || def.genre || "series" } : null;
 }
+var HOME_ROWS = [["peliculas", "list:peliculas"], ["series", "list:series"], ["animes", "list:animes"], ["infantil", "list:infantil"], ["doramas", "list:doramas"], ["populares", "list:populares"], ["netflix", "net:netflix"]];
+var homeRowTags = () => Object.fromEntries(HOME_ROWS.map(([id, ref]) => [id, refOf(ref).genre || "series"]));
 async function home() {
-  return homeWithin([
-    () => safeRow("peliculas", () => rowOf("peliculas", "list:peliculas")),
-    () => safeRow("series", () => rowOf("series", "list:series")),
-    () => safeRow("animes", () => rowOf("animes", "list:animes")),
-    () => safeRow("doramas", () => rowOf("doramas", "list:doramas")),
-    () => safeRow("populares", () => rowOf("populares", "list:populares")),
-    () => safeRow("netflix", () => rowOf("netflix", "net:netflix"))
-  ]);
+  return homeWithin(HOME_ROWS.map(([id, ref]) => () => safeRow(id, () => rowOf(id, ref))));
 }
 async function browse(ref, cursor) {
   const def = refOf(ref);
@@ -1637,12 +1635,14 @@ async function action(key) {
 }
 var proto_catalog_search = catalogDoor(search);
 export {
+  HOME_ROWS,
   action,
   browse,
   categories,
   details,
   episodes,
   home,
+  homeRowTags,
   proto_catalog_search,
   resolve,
   screen,
